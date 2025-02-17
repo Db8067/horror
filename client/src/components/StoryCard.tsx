@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AudioNarration } from "./AudioNarration";
 import { useState, useEffect } from "react";
 
 interface StoryCardProps {
@@ -39,8 +38,7 @@ export function StoryCard({ text, children }: StoryCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className="w-full max-w-2xl mx-auto bg-black/80 border-gray-800 relative">
-        <AudioNarration text={displayedText} />
+      <Card className="w-full max-w-2xl mx-auto bg-black/80 border-gray-800">
         <CardContent className="p-6">
           <ScrollArea className="h-[200px] mb-4">
             <AnimatePresence mode="wait">
