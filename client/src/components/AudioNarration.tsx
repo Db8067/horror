@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Volume2, VolumeX } from "lucide-react";
 
 interface AudioNarrationProps {
   text: string;
@@ -9,99 +8,71 @@ interface AudioNarrationProps {
 
 export function AudioNarration({ text }: AudioNarrationProps) {
   const [isMuted, setIsMuted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { toast } = useToast();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
-    const getAudioUrl = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await fetch('/api/synthesize', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text }),
-        });
+    if (!window.speechSynthesis) return;
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to generate audio');
-        }
+    // Cancel any ongoing speech when text changes
+    window.speechSynthesis.cancel();
+    speechRef.current = new SpeechSynthesisUtterance(text);
 
-        const blob = await response.blob();
-        if (audioRef.current) {
-          audioRef.current.src = URL.createObjectURL(blob);
-          if (!isMuted) {
-            try {
-              await audioRef.current.play();
-            } catch (playError) {
-              console.error('Playback error:', playError);
-              toast({
-                title: "Audio Playback Failed",
-                description: "Please click the audio icon to try again.",
-                variant: "destructive",
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to generate audio:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Audio narration unavailable';
-        setError(errorMessage);
-        toast({
-          title: "Audio Narration Issue",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    // Set a spooky voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice => 
+      voice.name.toLowerCase().includes('daniel') || // Deep voice
+      voice.name.toLowerCase().includes('google us english male')
+    );
+
+    if (preferredVoice) {
+      speechRef.current.voice = preferredVoice;
+    }
+
+    // Adjust for horror atmosphere
+    speechRef.current.rate = 0.9; // Slightly slower
+    speechRef.current.pitch = 0.8; // Deeper voice
+    speechRef.current.volume = 0.8;
+
+    speechRef.current.onend = () => {
+      setIsPlaying(false);
     };
 
-    if (text && !isMuted) {
-      getAudioUrl();
+    if (!isMuted) {
+      window.speechSynthesis.speak(speechRef.current);
+      setIsPlaying(true);
     }
-  }, [text, isMuted, toast]);
+
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, [text, isMuted]);
 
   const toggleMute = () => {
-    if (audioRef.current) {
-      if (isMuted && !audioRef.current.src) {
-        // If unmuting and no audio loaded, try to load it
-        setIsMuted(false);
-      } else {
-        audioRef.current.muted = !isMuted;
-        setIsMuted(!isMuted);
+    if (isMuted) {
+      setIsMuted(false);
+      if (speechRef.current) {
+        window.speechSynthesis.speak(speechRef.current);
+        setIsPlaying(true);
       }
+    } else {
+      setIsMuted(true);
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
     }
   };
 
+  if (!window.speechSynthesis) return null;
+
   return (
-    <div className="absolute top-4 right-4 flex items-center gap-2">
-      {error && (
-        <span className="text-sm text-red-400 bg-black/50 px-2 py-1 rounded">
-          {error}
-        </span>
-      )}
-      <audio 
-        ref={audioRef} 
-        autoPlay={!isMuted} 
-        onError={() => setError('Audio playback failed')}
-        hidden 
-      />
+    <div className="absolute top-4 right-4">
       <Button
         variant="ghost"
         size="icon"
         onClick={toggleMute}
         className="w-8 h-8 text-gray-200 hover:text-white bg-black/50"
-        disabled={isLoading}
       >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : isMuted ? (
+        {isMuted ? (
           <VolumeX className="h-4 w-4" />
         ) : (
           <Volume2 className="h-4 w-4" />
