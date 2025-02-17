@@ -9,52 +9,62 @@ interface AudioNarrationProps {
 export function AudioNarration({ text }: AudioNarrationProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const words = text.split(" ");
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     if (!window.speechSynthesis) return;
 
-    // Cancel any ongoing speech when text changes
+    // Reset when text changes
     window.speechSynthesis.cancel();
-    speechRef.current = new SpeechSynthesisUtterance(text);
+    setCurrentWordIndex(0);
+    setIsPlaying(false);
 
-    // Set a spooky voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(voice => 
-      voice.name.toLowerCase().includes('daniel') || // Deep voice
-      voice.name.toLowerCase().includes('google us english male')
-    );
+    const speakNextWord = () => {
+      if (currentWordIndex >= words.length || isMuted) return;
 
-    if (preferredVoice) {
-      speechRef.current.voice = preferredVoice;
-    }
+      speechRef.current = new SpeechSynthesisUtterance(words[currentWordIndex]);
 
-    // Adjust for horror atmosphere
-    speechRef.current.rate = 0.9; // Slightly slower
-    speechRef.current.pitch = 0.8; // Deeper voice
-    speechRef.current.volume = 0.8;
+      // Get available voices and select a female voice
+      const voices = window.speechSynthesis.getVoices();
+      const femaleVoice = voices.find(voice => 
+        voice.name.toLowerCase().includes('samantha') || // MacOS female voice
+        voice.name.toLowerCase().includes('female') ||
+        voice.name.toLowerCase().includes('google us english female')
+      );
 
-    speechRef.current.onend = () => {
-      setIsPlaying(false);
+      if (femaleVoice) {
+        speechRef.current.voice = femaleVoice;
+      }
+
+      // Adjust for horror atmosphere
+      speechRef.current.rate = 0.9; // Slightly slower
+      speechRef.current.pitch = 1.0; // Normal pitch for female voice
+      speechRef.current.volume = 0.8;
+
+      speechRef.current.onend = () => {
+        // Small pause between words
+        setTimeout(() => {
+          setCurrentWordIndex(prev => prev + 1);
+        }, 200); // Adjust pause duration between words here
+      };
+
+      window.speechSynthesis.speak(speechRef.current);
+      setIsPlaying(true);
     };
 
     if (!isMuted) {
-      window.speechSynthesis.speak(speechRef.current);
-      setIsPlaying(true);
+      speakNextWord();
     }
 
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, [text, isMuted]);
+  }, [text, currentWordIndex, isMuted, words]);
 
   const toggleMute = () => {
     if (isMuted) {
       setIsMuted(false);
-      if (speechRef.current) {
-        window.speechSynthesis.speak(speechRef.current);
-        setIsPlaying(true);
-      }
+      // Resume from current word
+      setCurrentWordIndex(prev => prev);
     } else {
       setIsMuted(true);
       window.speechSynthesis.cancel();
