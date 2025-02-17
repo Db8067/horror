@@ -64,6 +64,29 @@ export const storyNodes = {
       { id: "red_door", text: "Investigate the door with red light" },
       { id: "master_bedroom", text: "Enter the master bedroom" }
     ]
+  },
+  investigate_piano: {
+    text: "As you approach the piano, the melody becomes more frantic. The keys move faster and faster until they're a blur. Suddenly, the music stops. In the silence, you hear a child's giggle behind you.",
+    image: "https://images.unsplash.com/photo-1513883049090-d0b7439799bf",
+    choices: [
+      { id: "turn_around", text: "Turn to face whatever's behind you" },
+      { id: "run_parlor", text: "Run from the parlor" }
+    ]
+  },
+  run_away: {
+    text: "You turn to flee, but your legs won't move. The shadows around you grow darker, and you feel cold fingers brushing against your neck. The last thing you hear is a whispered 'Welcome home...'",
+    image: "https://images.unsplash.com/photo-1509248961158-e54f6934749c",
+    choices: [
+      { id: "stories", text: "Choose Another Story" }
+    ]
+  },
+  stories: {
+    text: "Your journey has ended, but more dark tales await...",
+    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
+    choices: [
+      { id: "start", text: "Start Over" },
+      { id: "browse", text: "Browse More Stories" }
+    ]
   }
 } as const;
 

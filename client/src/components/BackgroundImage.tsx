@@ -7,11 +7,13 @@ interface BackgroundImageProps {
 }
 
 export function BackgroundImage({ src, alt, isVideo = false }: BackgroundImageProps) {
+  if (!src) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 1 }}
+      transition={{ duration: 2 }}
       className="fixed inset-0 -z-10"
     >
       <div className="absolute inset-0 bg-black/60" />
@@ -27,7 +29,7 @@ export function BackgroundImage({ src, alt, isVideo = false }: BackgroundImagePr
             initial={{ scale: 1.1, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ duration: 1.5 }}
+            transition={{ duration: 2.5, ease: "easeInOut" }}
           >
             <source src={src} type="video/mp4" />
           </motion.video>
@@ -40,7 +42,7 @@ export function BackgroundImage({ src, alt, isVideo = false }: BackgroundImagePr
             initial={{ scale: 1.1, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ duration: 1.5 }}
+            transition={{ duration: 2.5, ease: "easeInOut" }}
           />
         )}
       </AnimatePresence>
