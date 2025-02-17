@@ -8,67 +8,77 @@ interface AudioNarrationProps {
 
 export function AudioNarration({ text }: AudioNarrationProps) {
   const [isMuted, setIsMuted] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const words = text.split(" ");
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const words = text.split(/\s+/).filter(word => word.length > 0);
+  const speechQueue = useRef<string[]>([]);
+  const isProcessing = useRef(false);
 
-  useEffect(() => {
-    if (!window.speechSynthesis) return;
+  // Process the speech queue
+  const processQueue = async () => {
+    if (isProcessing.current || isMuted || !window.speechSynthesis) return;
+    if (currentWordIndex >= words.length) return;
 
-    // Reset when text changes
-    window.speechSynthesis.cancel();
-    setCurrentWordIndex(0);
-    setIsPlaying(false);
+    isProcessing.current = true;
+    const word = words[currentWordIndex];
 
-    const speakNextWord = () => {
-      if (currentWordIndex >= words.length || isMuted) return;
+    const utterance = new SpeechSynthesisUtterance(word);
 
-      speechRef.current = new SpeechSynthesisUtterance(words[currentWordIndex]);
+    // Get available voices
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find(voice => 
+      voice.name.toLowerCase().includes('samantha') || 
+      voice.name.toLowerCase().includes('female') ||
+      voice.name.toLowerCase().includes('google us english female')
+    );
 
-      // Get available voices and select a female voice
-      const voices = window.speechSynthesis.getVoices();
-      const femaleVoice = voices.find(voice => 
-        voice.name.toLowerCase().includes('samantha') || // MacOS female voice
-        voice.name.toLowerCase().includes('female') ||
-        voice.name.toLowerCase().includes('google us english female')
-      );
-
-      if (femaleVoice) {
-        speechRef.current.voice = femaleVoice;
-      }
-
-      // Adjust for horror atmosphere
-      speechRef.current.rate = 0.9; // Slightly slower
-      speechRef.current.pitch = 1.0; // Normal pitch for female voice
-      speechRef.current.volume = 0.8;
-
-      speechRef.current.onend = () => {
-        // Small pause between words
-        setTimeout(() => {
-          setCurrentWordIndex(prev => prev + 1);
-        }, 200); // Adjust pause duration between words here
-      };
-
-      window.speechSynthesis.speak(speechRef.current);
-      setIsPlaying(true);
-    };
-
-    if (!isMuted) {
-      speakNextWord();
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
     }
 
-  }, [text, currentWordIndex, isMuted, words]);
+    // Adjust for horror atmosphere
+    utterance.rate = 0.9;    // Slightly slower
+    utterance.pitch = 1.0;   // Normal pitch for female voice
+    utterance.volume = 0.8;  // Slightly quieter
+
+    utterance.onend = () => {
+      isProcessing.current = false;
+      setTimeout(() => {
+        setCurrentWordIndex(prev => prev + 1);
+      }, 300); // 300ms pause between words
+    };
+
+    utterance.onerror = () => {
+      isProcessing.current = false;
+      setCurrentWordIndex(prev => prev + 1);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Reset when text changes
+  useEffect(() => {
+    window.speechSynthesis?.cancel();
+    setCurrentWordIndex(0);
+    isProcessing.current = false;
+    speechQueue.current = [];
+  }, [text]);
+
+  // Process next word when current one finishes
+  useEffect(() => {
+    if (!isMuted) {
+      processQueue();
+    }
+  }, [currentWordIndex, isMuted]);
 
   const toggleMute = () => {
     if (isMuted) {
       setIsMuted(false);
       // Resume from current word
-      setCurrentWordIndex(prev => prev);
+      processQueue();
     } else {
       setIsMuted(true);
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
+      window.speechSynthesis?.cancel();
+      isProcessing.current = false;
     }
   };
 
