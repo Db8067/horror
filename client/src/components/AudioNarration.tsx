@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Volume2, VolumeX, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface AudioNarrationProps {
   text: string;
@@ -11,6 +12,7 @@ export function AudioNarration({ text }: AudioNarrationProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const getAudioUrl = async () => {
@@ -34,31 +36,55 @@ export function AudioNarration({ text }: AudioNarrationProps) {
         if (audioRef.current) {
           audioRef.current.src = URL.createObjectURL(blob);
           if (!isMuted) {
-            await audioRef.current.play();
+            try {
+              await audioRef.current.play();
+            } catch (playError) {
+              console.error('Playback error:', playError);
+              toast({
+                title: "Audio Playback Failed",
+                description: "Please click the audio icon to try again.",
+                variant: "destructive",
+              });
+            }
           }
         }
       } catch (error) {
         console.error('Failed to generate audio:', error);
-        setError('Audio narration unavailable');
+        const errorMessage = error instanceof Error ? error.message : 'Audio narration unavailable';
+        setError(errorMessage);
+        toast({
+          title: "Audio Narration Issue",
+          description: errorMessage,
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    getAudioUrl();
-  }, [text, isMuted]);
+    if (text && !isMuted) {
+      getAudioUrl();
+    }
+  }, [text, isMuted, toast]);
 
   const toggleMute = () => {
     if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+      if (isMuted && !audioRef.current.src) {
+        // If unmuting and no audio loaded, try to load it
+        setIsMuted(false);
+      } else {
+        audioRef.current.muted = !isMuted;
+        setIsMuted(!isMuted);
+      }
     }
   };
 
   return (
     <div className="absolute top-4 right-4 flex items-center gap-2">
       {error && (
-        <span className="text-sm text-red-400">{error}</span>
+        <span className="text-sm text-red-400 bg-black/50 px-2 py-1 rounded">
+          {error}
+        </span>
       )}
       <audio 
         ref={audioRef} 
@@ -70,15 +96,15 @@ export function AudioNarration({ text }: AudioNarrationProps) {
         variant="ghost"
         size="icon"
         onClick={toggleMute}
-        className="w-8 h-8 text-gray-200 hover:text-white"
+        className="w-8 h-8 text-gray-200 hover:text-white bg-black/50"
         disabled={isLoading}
       >
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : isMuted ? (
-          <VolumeX />
+          <VolumeX className="h-4 w-4" />
         ) : (
-          <Volume2 />
+          <Volume2 className="h-4 w-4" />
         )}
       </Button>
     </div>

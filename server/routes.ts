@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express) {
 
     if (!process.env.ELEVENLABS_API_KEY) {
       return res.status(503).json({ 
-        error: "Text-to-speech service is currently unavailable" 
+        error: "Please wait while we set up the audio narration service..." 
       });
     }
 
@@ -59,6 +59,8 @@ export async function registerRoutes(app: Express) {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('ElevenLabs API error:', errorText);
         throw new Error(`ElevenLabs API error: ${response.statusText}`);
       }
 
@@ -68,7 +70,7 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error('Text-to-speech error:', error);
       res.status(500).json({ 
-        error: "Failed to generate audio narration. Please try again later." 
+        error: "We're setting up the audio narration. Please try again in a moment." 
       });
     }
   });
